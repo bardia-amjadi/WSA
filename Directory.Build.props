@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <!-- Everything is built for x64 (initial release). Build with: dotnet build WSA.sln -c Release -p:Platform=x64 -->
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+    <Company>WSA contributors</Company>
+    <Product>WSA (Windows Subsystem for Android)</Product>
+    <RepositoryUrl>https://github.com/bardia-amjadi/WSA</RepositoryUrl>
+  </PropertyGroup>
+</Project>
