@@ -18,4 +18,10 @@ public interface IProcessRunner
         IProgress<OutputLine>? output = null,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Like <see cref="RunAsync"/> but captures standard output as raw bytes (capped at 32 MB). Standard error is text.</summary>
+    Task<BinaryResult> RunBinaryAsync(
+        CommandRequest request,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
 }

@@ -14,6 +14,8 @@ public sealed partial class OverviewPage : Page
 
     public OverviewViewModel ViewModel { get; }
 
+    private void OpenSetup_Click(object sender, RoutedEventArgs e) => App.MainWindow?.NavigateTo("setup");
+
     private async void Page_Loaded(object sender, RoutedEventArgs e) =>
         await ViewModel.RefreshCommand.ExecuteAsync(null);
 }

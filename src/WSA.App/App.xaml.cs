@@ -8,6 +8,7 @@ using WSA.Infrastructure.Adb;
 using WSA.Infrastructure.Configuration;
 using WSA.Infrastructure.Emulator;
 using WSA.Infrastructure.ProcessExecution;
+using WSA.Infrastructure.Setup;
 
 namespace WSA.App;
 
@@ -50,13 +51,19 @@ public partial class App : Application
         services.AddSingleton<IAdbService, AdbService>();
         services.AddSingleton<IAvdService, AvdService>();
         services.AddSingleton<IAvdLifecycleService, AvdLifecycleService>();
+        services.AddSingleton<IPhoneService, PhoneService>();
+        services.AddSingleton<PhoneViewModel>();
         services.AddSingleton<TerminalService>();
+        services.AddSingleton<FileDownloader>();
+        services.AddSingleton<ISdkSetupService, SdkSetupService>();
 
         services.AddSingleton<OverviewViewModel>();
         services.AddSingleton<DevicesViewModel>();
         services.AddSingleton<TerminalViewModel>();
         services.AddSingleton<RuntimeViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<SetupViewModel>();
+        services.AddSingleton<StoreViewModel>();
 
         return services.BuildServiceProvider();
     }

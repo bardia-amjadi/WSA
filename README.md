@@ -6,7 +6,7 @@ WSA is **not** a hypervisor, not Microsoft's discontinued Windows Subsystem for 
 
 ## Status (honest summary)
 
-This is an early **Phase 1 + Phase 2** release (foundation and virtual-device lifecycle). It has **not been compiled or run by its author yet**: the code was written in a Linux sandbox with no .NET SDK or Windows, so the first real build is the GitHub Actions run. Expect to fix build errors on first run.
+This is an early **Phase 1 + 2 + 3** release (foundation, virtual-device lifecycle, in-app setup and Android Store). The Phase 1+2 code built successfully in GitHub Actions. Phase 3 (Setup, Android Store) has **not been compiled or run yet**; it was written without a .NET SDK or Windows. Nothing has been verified on a real machine, and the downloads (JDK, Google's repository index, `sdkmanager --list` parsing) have never been exercised end to end. Expect to fix issues on first run.
 
 | Feature | State |
 |---|---|
@@ -20,7 +20,13 @@ This is an early **Phase 1 + Phase 2** release (foundation and virtual-device li
 | Progress bar, live tool output and Cancel for lifecycle operations | Implemented (Phase 2), untested |
 | WSA Terminal: direct execution of SDK tools, streaming output, history (Up/Down), copy, clear, cancel (Esc), exit codes | Implemented, untested |
 | Interactive `adb shell` | **Not supported.** `adb shell <command>` runs one-shot commands only |
-| Guided SDK install | **Not implemented** (manual steps shown in *Runtime & SDK*) |
+| **Setup** page: installs a private JDK (Microsoft OpenJDK 21, SHA-256 checked), Google's command-line tools (SHA-1 from Google's index), platform-tools and emulator via `sdkmanager`; license screen with explicit Accept; first-run redirect | Implemented (Phase 3), untested |
+| **Android Store** page: lists x86_64 system images (Google Play / Google APIs / AOSP) from `sdkmanager --list`, Install / Remove with progress and Cancel, free-space check, jump to *Create virtual device* | Implemented (Phase 3), untested |
+| **Phone** page: real phone over USB or Wi-Fi (adb pair/connect), device info, live view with click-to-tap and drag-to-swipe, Back/Home/Recents/Power/volume keys, ASCII text input, APK install, screenshot save, adb-only quick install (~10 MB, SHA-1 checked, license shown) | Implemented (Phase 4), untested |
+| Phone live view smoothness | **Limited**: polls `adb exec-out screencap -p`, so a few frames per second, not video. Smooth mirroring would need scrcpy, a separate download that is not included |
+| Pause/resume of downloads | **Not implemented** (Cancel only; a cancelled download restarts from zero) |
+| Per-image download sizes | **Not shown** (`sdkmanager --list` does not report them; expect 1-2 GB each) |
+| Enabling virtualization / Windows Hypervisor Platform | **Cannot be done by WSA** (needs admin + restart); Setup shows the check result and opens Windows Features |
 | Settings (SDK root, buffer size) persisted to `%LOCALAPPDATA%\WSA\settings.json` | Implemented, untested |
 | MSIX package | **Not produced** (see Packaging) |
 
@@ -40,6 +46,10 @@ Pinned: .NET SDK 10.0.100 (`global.json`, roll-forward to latest feature band), 
 - The Android SDK with command-line tools, platform-tools, emulator and at least one system image (WSA does not bundle them).
 
 ## Android SDK setup
+
+**Recommended: do it inside WSA.** On first launch WSA opens **Setup**. Press *Install everything that is missing*, read and accept Google's license text, and wait. Then open **Android Store**, install an Android version, and press *Create virtual device*. Downloads: JDK from Microsoft (`aka.ms/download-jdk`), Android tools from `dl.google.com`; the JDK goes to `%LOCALAPPDATA%\WSA\jdk` and the SDK to `%LOCALAPPDATA%\Android\Sdk` unless you set another folder in Settings. Nothing is installed system-wide and no admin rights are needed. You still need virtualization enabled in BIOS/UEFI plus the Windows Hypervisor Platform feature.
+
+Manual alternative:
 
 1. Install a JDK (17 or newer).
 2. Download "Command line tools only" from <https://developer.android.com/studio#command-line-tools-only>; extract so that `sdkmanager.bat` is at `<SDK root>\cmdline-tools\latest\bin\`. A typical root is `%LOCALAPPDATA%\Android\Sdk`.
@@ -80,6 +90,16 @@ Workflow: `.github/workflows/build.yml` (Windows runner). Every push/PR builds a
 The ZIP is an **unpackaged, self-contained** build (.NET and the Windows App SDK runtime are included), so it runs on a clean x64 Windows machine after extraction. The Android SDK/emulator are **not** included.
 
 An **MSIX is not produced yet.** MSIX needs a signing certificate that matches the manifest publisher; this project does not fabricate one or disable signature checks. An MSIX can be added later with a repository-secret certificate.
+
+## Connect a real phone
+
+Open **Phone**. If adb is missing, press *Install adb* (about 10 MB from Google; no Java, emulator or Android image). Then:
+
+- **USB:** on the phone enable Developer options (Settings > About phone > tap Build number 7 times) and turn on *USB debugging*; connect a data-capable cable; unlock the phone and tap *Allow* (tick *Always allow*). Some brands need their USB driver on Windows.
+- **Wi-Fi (Android 11+):** Developer options > Wireless debugging > on. In WSA press *Connect over Wi-Fi...*, enter the connect address, and the first time also the pairing address and 6-digit code from *Pair device with pairing code*. PC and phone must be on the same network.
+- Turn on **Live view** to see the screen; click to tap, drag to swipe. *Install APK...*, *Save screenshot...*, hardware keys and text input work on the selected device. Text input supports plain ASCII only.
+
+Notes: only what adb can do is possible. Apps that block screenshots (banking apps, some video) show a black frame. Live view is screenshot polling, not video.
 
 ## Create and launch a virtual device
 

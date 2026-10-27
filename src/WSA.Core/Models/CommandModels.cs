@@ -18,6 +18,17 @@ public enum OutputKind
 
 public readonly record struct OutputLine(OutputKind Kind, string Text);
 
+/// <summary>Result of a command whose standard output is binary (for example a PNG from <c>adb exec-out screencap -p</c>).</summary>
+public sealed record BinaryResult(
+    int? ExitCode,
+    byte[] Output,
+    string StandardError,
+    string? StartError,
+    bool WasCancelled)
+{
+    public bool Succeeded => StartError is null && !WasCancelled && ExitCode == 0;
+}
+
 /// <summary>Outcome of a finished (or failed-to-start) command.</summary>
 public sealed record CommandResult(
     string Executable,

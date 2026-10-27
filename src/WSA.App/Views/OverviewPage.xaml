@@ -27,6 +27,13 @@
 
             <InfoBar IsOpen="{x:Bind ViewModel.HasStartupWarning}" IsClosable="False" Severity="Warning"
                      Title="Settings" Message="{x:Bind ViewModel.StartupWarning}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.NeedsSetup, Mode=OneWay}" IsClosable="False" Severity="Warning"
+                     Title="Android setup is not finished"
+                     Message="Some required components are missing. WSA can install them for you.">
+                <InfoBar.ActionButton>
+                    <Button Content="Open Setup" Click="OpenSetup_Click" />
+                </InfoBar.ActionButton>
+            </InfoBar>
             <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" IsClosable="False" Severity="Error"
                      Title="Something went wrong" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
 

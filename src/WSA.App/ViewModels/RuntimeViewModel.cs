@@ -40,13 +40,13 @@ public partial class RuntimeViewModel : ObservableObject
     public ObservableCollection<string> Diagnostics { get; } = new();
 
     public string SetupGuide =>
+        "Easiest: open the Setup page and let WSA install everything. The steps below are the manual alternative.\r\n\r\n" +
         "1. Install a JDK (17 or newer) - sdkmanager and avdmanager are Java programs.\r\n" +
         "2. Download \"Command line tools only\" from https://developer.android.com/studio#command-line-tools-only and extract it to <SDK root>\\cmdline-tools\\latest.\r\n" +
         "3. In WSA Terminal run:  sdkmanager --licenses   (read and accept the licenses yourself).\r\n" +
         "4. Run:  sdkmanager \"platform-tools\" \"emulator\" \"system-images;android-34;google_apis;x86_64\"\r\n" +
         "5. Create a device:  avdmanager create avd -n Pixel_34 -k \"system-images;android-34;google_apis;x86_64\" -d pixel_6\r\n" +
-        "6. Press Re-detect. If your SDK lives elsewhere, set the SDK root in Settings.\r\n\r\n" +
-        "Guided in-app installation is planned for a later phase; today this setup is manual.";
+        "6. Press Re-detect. If your SDK lives elsewhere, set the SDK root in Settings.";
 
     [RelayCommand]
     private async Task RefreshAsync()

@@ -1,0 +1,175 @@
+<Page
+    x:Class="WSA.App.Views.PhonePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WSA.App.ViewModels"
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded">
+
+    <Grid Margin="{StaticResource PageMargin}" ColumnSpacing="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="400" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer>
+            <StackPanel Spacing="12" Padding="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PageTitleStyle}" Text="Phone" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Use your real Android phone from here. Only adb is needed; no emulator or Android image is downloaded." />
+                </StackPanel>
+
+                <InfoBar IsOpen="{x:Bind ViewModel.AdbMissing, Mode=OneWay}" IsClosable="False" Severity="Warning"
+                         Title="adb is not installed" Message="It is about 10 MB from Google.">
+                    <InfoBar.ActionButton>
+                        <Button Content="Install adb" Click="InstallAdb_Click"
+                                IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
+                <InfoBar IsOpen="{x:Bind ViewModel.HasHint, Mode=OneWay}" IsClosable="False" Severity="Informational"
+                         Message="{x:Bind ViewModel.StateHint, Mode=OneWay}" />
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="10">
+                        <ComboBox Header="Device" HorizontalAlignment="Stretch"
+                                  ItemsSource="{x:Bind ViewModel.Devices}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedDevice, Mode=TwoWay}"
+                                  DisplayMemberPath="Display" PlaceholderText="No device" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Refresh" Command="{x:Bind ViewModel.RefreshCommand}"
+                                    IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}" />
+                            <Button Content="Connect over Wi-Fi..." Click="Wifi_Click"
+                                    IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}" />
+                            <Button Content="Disconnect" Command="{x:Bind ViewModel.DisconnectCommand}"
+                                    IsEnabled="{x:Bind ViewModel.CanDisconnect, Mode=OneWay}" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.InfoRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:InfoRow">
+                                    <Grid ColumnSpacing="10" Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Label}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Value}" TextWrapping="Wrap"
+                                                   IsTextSelectionEnabled="True" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Actions" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Install APK..." Click="InstallApk_Click"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Save screenshot..." Click="Screenshot_Click"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Back" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="BACK"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Home" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="HOME"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Recents" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="APP_SWITCH"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Power" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="POWER"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Vol -" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="VOLUME_DOWN"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Vol +" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="VOLUME_UP"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Enter" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="ENTER"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                            <Button Content="Delete" Command="{x:Bind ViewModel.SendKeyCommand}" CommandParameter="DEL"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                        </StackPanel>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox PlaceholderText="Type text on the phone (ASCII only)"
+                                     Text="{x:Bind ViewModel.TextToSend, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="TextBox_KeyDown" />
+                            <Button Grid.Column="1" Content="Send" Command="{x:Bind ViewModel.SendTextCommand}"
+                                    IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{x:Bind ViewModel.OperationText, Mode=OneWay}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
+                        </Grid>
+                        <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsIndeterminate, Mode=OneWay}"
+                                     Minimum="0" Maximum="100" Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}" />
+                        <ListView ItemsSource="{x:Bind ViewModel.OperationLog}" SelectionMode="None" MaxHeight="120">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{x:Bind}" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                               TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" IsClosable="False" Severity="Error"
+                         Title="Problem" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
+                <InfoBar IsOpen="{x:Bind ViewModel.HasSuccess, Mode=OneWay}" IsClosable="False" Severity="Success"
+                         Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+            <Grid RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ToggleSwitch Header="Live view" OnContent="On" OffContent="Off"
+                                  IsOn="{x:Bind ViewModel.IsLive, Mode=TwoWay}"
+                                  IsEnabled="{x:Bind ViewModel.IsDeviceReady, Mode=OneWay}" />
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                               Text="{x:Bind ViewModel.LiveStatus, Mode=OneWay}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Image x:Name="PhoneImage" Source="{x:Bind ViewModel.Frame, Mode=OneWay}" Stretch="Uniform"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           PointerPressed="Frame_PointerPressed" PointerReleased="Frame_PointerReleased" />
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" MaxWidth="360"
+                                Visibility="{x:Bind ViewModel.ShowPlaceholder, Mode=OneWay}">
+                        <TextBlock Text="Phone screen" Style="{StaticResource SubtitleTextBlockStyle}"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock TextWrapping="Wrap" TextAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="Turn on Live view to see the phone here. Click to tap, drag to swipe. The picture refreshes a few times per second (screenshots over adb), so it is not smooth video." />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

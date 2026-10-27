@@ -82,8 +82,18 @@ public sealed class SdkLocator : ISdkLocator
 
     internal static readonly SdkTool[] AllTools = { SdkTool.SdkManager, SdkTool.AvdManager, SdkTool.Emulator, SdkTool.Adb };
 
-    internal static IReadOnlyDictionary<string, string> SdkEnvironment(string root) =>
-        new Dictionary<string, string> { ["ANDROID_SDK_ROOT"] = root, ["ANDROID_HOME"] = root };
+    internal static IReadOnlyDictionary<string, string> SdkEnvironment(string root)
+    {
+        var env = new Dictionary<string, string> { ["ANDROID_SDK_ROOT"] = root, ["ANDROID_HOME"] = root };
+
+        // A JDK installed by WSA is known to satisfy sdkmanager, so it takes precedence over whatever JAVA_HOME says.
+        if (File.Exists(Configuration.ManagedPaths.JavaExe))
+        {
+            env["JAVA_HOME"] = Configuration.ManagedPaths.JdkDir;
+        }
+
+        return env;
+    }
 
     private (string? Root, string Source) ResolveRoot(List<string> diagnostics)
     {

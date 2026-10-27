@@ -43,6 +43,9 @@ public partial class OverviewViewModel : ObservableObject
     [ObservableProperty]
     private string _runningSummary = "-";
 
+    [ObservableProperty]
+    private bool _needsSetup;
+
     public bool IsNotBusy => !IsBusy;
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
@@ -80,6 +83,7 @@ public partial class OverviewViewModel : ObservableObject
     {
         SdkRoot = status.SdkRoot ?? "No Android SDK found";
         SdkSource = status.SdkRootSource;
+        NeedsSetup = !status.IsComplete;
 
         var ready = status.Tools.Count(t => t.IsAvailable);
         RuntimeHeadline = status.IsComplete

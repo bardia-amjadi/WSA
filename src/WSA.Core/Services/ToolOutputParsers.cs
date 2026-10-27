@@ -140,6 +140,43 @@ public static class ToolOutputParsers
         return name is null ? null : new AvdInfo(name, device, path, target, basedOn, abi, false, null);
     }
 
+    /// <summary>
+    /// Parses <c>sdkmanager --list</c>. Only the "Installed packages" and "Available Packages" tables are read;
+    /// rows are "path | version | description [| location]". Progress lines and headers are ignored.
+    /// </summary>
+    public static IReadOnlyList<SdkListEntry> ParseSdkManagerList(string output)
+    {
+        var entries = new List<SdkListEntry>();
+        var section = string.Empty;
+        foreach (var raw in output.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.StartsWith("Installed packages", StringComparison.OrdinalIgnoreCase)) { section = "installed"; continue; }
+            if (line.StartsWith("Available Packages", StringComparison.OrdinalIgnoreCase)) { section = "available"; continue; }
+            if (line.StartsWith("Available Updates", StringComparison.OrdinalIgnoreCase)) { section = "updates"; continue; }
+            if (section is not ("installed" or "available"))
+            {
+                continue;
+            }
+
+            var parts = line.Split('|');
+            if (parts.Length < 3)
+            {
+                continue;
+            }
+
+            var path = parts[0].Trim();
+            if (path.Length == 0 || path == "Path" || path.StartsWith("---", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            entries.Add(new SdkListEntry(path, parts[1].Trim(), parts[2].Trim(), section == "installed"));
+        }
+
+        return entries;
+    }
+
     /// <summary>Extracts a one-line version string from tool output (first non-empty line).</summary>
     public static string? FirstLine(string output) =>
         output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0);

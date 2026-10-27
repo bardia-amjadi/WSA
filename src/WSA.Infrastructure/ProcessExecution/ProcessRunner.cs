@@ -64,9 +64,19 @@ public sealed class ProcessRunner : IProcessRunner
             StandardErrorEncoding = Encoding.UTF8,
         };
 
-        foreach (var arg in request.Arguments)
+        if (ext.Equals(".bat", StringComparison.OrdinalIgnoreCase) || ext.Equals(".cmd", StringComparison.OrdinalIgnoreCase))
         {
-            psi.ArgumentList.Add(arg);
+            // cmd.exe splits unquoted batch arguments at ';' ',' and '='. SDK package ids such as
+            // "system-images;android-34;google_apis;x86_64" would be torn apart, so every argument is quoted.
+            // Arguments containing '"' or '%' were rejected above, which keeps this quoting unambiguous.
+            psi.Arguments = string.Join(' ', request.Arguments.Select(QuoteForBatch));
+        }
+        else
+        {
+            foreach (var arg in request.Arguments)
+            {
+                psi.ArgumentList.Add(arg);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
@@ -158,6 +168,138 @@ public sealed class ProcessRunner : IProcessRunner
         return new CommandResult(
             request.Executable, request.Arguments, exitCode,
             stdout.ToString(), stderr.ToString(), stopwatch.Elapsed, cancelled, startError);
+    }
+
+    public async Task<BinaryResult> RunBinaryAsync(
+        CommandRequest request, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        const int maxBytes = 32 * 1024 * 1024;
+
+        if (!File.Exists(request.Executable))
+        {
+            return new BinaryResult(null, Array.Empty<byte>(), string.Empty, $"Executable not found: {request.Executable}", false);
+        }
+
+        var ext = Path.GetExtension(request.Executable);
+        if (ext.Equals(".bat", StringComparison.OrdinalIgnoreCase) || ext.Equals(".cmd", StringComparison.OrdinalIgnoreCase))
+        {
+            return new BinaryResult(null, Array.Empty<byte>(), string.Empty,
+                "Binary capture is only supported for real executables, not batch files.", false);
+        }
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = request.Executable,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        foreach (var arg in request.Arguments)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
+        {
+            psi.WorkingDirectory = request.WorkingDirectory;
+        }
+
+        if (request.Environment is not null)
+        {
+            foreach (var (key, value) in request.Environment)
+            {
+                psi.Environment[key] = value;
+            }
+        }
+
+        using var process = new Process { StartInfo = psi };
+        try
+        {
+            if (!process.Start())
+            {
+                return new BinaryResult(null, Array.Empty<byte>(), string.Empty, "The process did not start.", false);
+            }
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            return new BinaryResult(null, Array.Empty<byte>(), string.Empty,
+                $"Could not start {Path.GetFileName(request.Executable)}: {ex.Message}", false);
+        }
+
+        try
+        {
+            process.StandardInput.Close();
+        }
+        catch (IOException)
+        {
+            // Already exited.
+        }
+
+        using var timeoutCts = new CancellationTokenSource();
+        if (timeout is { } t)
+        {
+            timeoutCts.CancelAfter(t);
+        }
+
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+        var buffer = new MemoryStream();
+        var stdoutTask = Task.Run(async () =>
+        {
+            var chunk = new byte[81920];
+            var stream = process.StandardOutput.BaseStream;
+            int read;
+            while ((read = await stream.ReadAsync(chunk, CancellationToken.None).ConfigureAwait(false)) > 0)
+            {
+                if (buffer.Length + read <= maxBytes)
+                {
+                    buffer.Write(chunk, 0, read);
+                }
+            }
+        });
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        var cancelled = false;
+        string? error = null;
+        try
+        {
+            await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+            if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                error = $"Timed out after {timeout!.Value.TotalSeconds:0} s and was terminated.";
+            }
+
+            TryKillTree(process);
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+
+        await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+
+        int? exitCode = null;
+        try
+        {
+            exitCode = process.ExitCode;
+        }
+        catch (InvalidOperationException)
+        {
+            // Unavailable.
+        }
+
+        return new BinaryResult(exitCode, buffer.ToArray(), stderrTask.Result, error, cancelled);
+    }
+
+    private static string QuoteForBatch(string arg)
+    {
+        // A backslash run directly before the closing quote would escape it, so double those backslashes.
+        var trailing = arg.Length - arg.TrimEnd('\\').Length;
+        return "\"" + arg + new string('\\', trailing) + "\"";
     }
 
     private static async Task PumpAsync(StreamReader reader, OutputKind kind, StringBuilder sink, IProgress<OutputLine>? progress)

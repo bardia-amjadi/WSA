@@ -15,10 +15,26 @@ public sealed partial class DevicesPage : Page
 
     public DevicesViewModel ViewModel { get; }
 
+    private bool _openCreateOnLoad;
+
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+
+        // The Android Store sends "create" after an image was installed.
+        _openCreateOnLoad = e.Parameter as string == "create";
+    }
+
     private async void Page_Loaded(object sender, RoutedEventArgs e)
     {
         ViewModel.ConfirmAsync = ConfirmAsync;
         await ViewModel.RefreshCommand.ExecuteAsync(null);
+
+        if (_openCreateOnLoad)
+        {
+            _openCreateOnLoad = false;
+            Create_Click(this, new RoutedEventArgs());
+        }
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)
