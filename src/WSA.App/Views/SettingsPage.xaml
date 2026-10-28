@@ -65,7 +65,7 @@
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="WSA Terminal"Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock Text="WSA Terminal" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <NumberBox Header="Output buffer (lines)" Minimum="200" Maximum="100000"
                                SpinButtonPlacementMode="Inline" SmallChange="500" LargeChange="5000"
                                Value="{x:Bind ViewModel.TerminalMaxLines, Mode=TwoWay}" Width="220"
