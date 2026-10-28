@@ -28,6 +28,12 @@ This is an early **Phase 1 + 2 + 3** release (foundation, virtual-device lifecyc
 | Per-image download sizes | **Not shown** (`sdkmanager --list` does not report them; expect 1-2 GB each) |
 | Enabling virtualization / Windows Hypervisor Platform | **Cannot be done by WSA** (needs admin + restart); Setup shows the check result and opens Windows Features |
 | Settings (SDK root, buffer size) persisted to `%LOCALAPPDATA%\WSA\settings.json` | Implemented, untested |
+| **Setup wizard** (Phase 5): first page asks Phone vs Everything; Phone installs only adb, Everything walks through Java, command-line tools, platform tools + emulator, acceleration; every step has Automatic and Manual (existing JDK/SDK folder, copyable commands) | Implemented (Phase 5), untested |
+| Navigation follows the goal (Phone goal hides Virtual Devices and Android Store) | Implemented (Phase 5), untested |
+| **Debug mode** (Settings): logs every command line, exit code and output to `%LOCALAPPDATA%\WSA\logs`; Debug page with live log, copy, copy diagnostics, open folder | Implemented (Phase 5), untested |
+| Settings: goal, theme (Windows/Light/Dark), JDK folder with *Test Java*, SDK folder, debug mode | Implemented (Phase 5), untested |
+| Java detection: explicit JDK setting, inherited + stored Windows `JAVA_HOME`/`PATH`, `java` terminal command | Implemented, untested |
+| Custom title bar, consistent cards and spacing | Implemented (Phase 5), untested; visual quality not yet judged on a real screen |
 | MSIX package | **Not produced** (see Packaging) |
 
 ## Architecture
@@ -122,3 +128,11 @@ Notes: the emulator is started without redirected output so it stays independent
 ## License
 
 MIT
+
+## Troubleshooting: "Java version 17 or higher is required"
+
+WSA gives `sdkmanager`, `avdmanager` and the emulator a JDK chosen in this order: **Settings → JDK folder**, a JDK installed by WSA, `JAVA_HOME` of the WSA process, `JAVA_HOME` stored in Windows (user, then system), first `java.exe` on `PATH`. Child processes inherit WSA's environment; the stored Windows `JAVA_HOME`/`PATH` are merged in so a value set after WSA started is still seen. No shell is used and `SKIP_JDK_VERSION_CHECK` is never set.
+
+To see exactly what the tools get, run `java` in WSA Terminal or click **Test Java** in Settings. It prints the chosen folder and its source, the `java.exe` path, the version the JVM itself reports (`java.specification.version`, `java.home`, vendor) and whether it meets Java 17. If Java 27 is reported as acceptable yet `sdkmanager` still refuses it, the rejection comes from the command-line tools' own launcher; that is a separate compatibility issue (try a newer command-line tools release, or let Setup install JDK 21).
+
+Status: this logic has not been run on a real Windows machine yet; the `java` output is the first thing to check.
