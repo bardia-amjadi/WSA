@@ -9,6 +9,22 @@
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Settings" />
 
             <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="General" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <ComboBox Header="Use WSA for" SelectedIndex="{x:Bind ViewModel.GoalIndex, Mode=TwoWay}" Width="320">
+                        <ComboBoxItem Content="Connecting my phone (adb only)" />
+                        <ComboBoxItem Content="Everything (virtual devices, store, phone)" />
+                    </ComboBox>
+                    <ComboBox Header="Theme" SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}" Width="320">
+                        <ComboBoxItem Content="Match Windows" />
+                        <ComboBoxItem Content="Light" />
+                        <ComboBoxItem Content="Dark" />
+                    </ComboBox>
+                    <Button Content="Open the setup wizard" Command="{x:Bind ViewModel.OpenWizardCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Android SDK root" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -27,11 +43,44 @@
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="WSA Terminal" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock Text="JDK folder (JAVA_HOME)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Used by sdkmanager, avdmanager and the emulator. Leave empty to use a JDK installed by WSA, then JAVA_HOME, then java on PATH. Pick the folder that contains bin\java.exe, e.g. C:\Java\jdk-27." />
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{x:Bind ViewModel.JavaHomeText, Mode=TwoWay}" PlaceholderText="C:\Java\jdk-27" />
+                        <Button Grid.Column="1" Content="Auto-detect" Command="{x:Bind ViewModel.ClearJavaHomeCommand}" />
+                        <Button Grid.Column="2" Content="Test Java" Command="{x:Bind ViewModel.TestJavaCommand}"
+                                IsEnabled="{x:Bind ViewModel.IsNotBusy, Mode=OneWay}" />
+                    </Grid>
+                    <TextBlock TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="Consolas"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Text="{x:Bind ViewModel.JavaReportText, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="WSA Terminal"Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <NumberBox Header="Output buffer (lines)" Minimum="200" Maximum="100000"
                                SpinButtonPlacementMode="Inline" SmallChange="500" LargeChange="5000"
                                Value="{x:Bind ViewModel.TerminalMaxLines, Mode=TwoWay}" Width="220"
                                HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Advanced" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <ToggleSwitch Header="Debug mode" IsOn="{x:Bind ViewModel.DebugMode, Mode=TwoWay}"
+                                  OnContent="On: commands and output are logged; the Debug page is shown"
+                                  OffContent="Off: only errors are logged" />
+                    <TextBlock Style="{StaticResource MutedTextStyle}"
+                               Text="{x:Bind ViewModel.AppVersion}" />
                 </StackPanel>
             </Border>
 

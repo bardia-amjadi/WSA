@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSA.Core.Interfaces;
+using WSA.Core.Models;
 
 namespace WSA.App.ViewModels;
 
@@ -8,12 +9,66 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsService _settings;
     private readonly ISdkLocator _sdk;
+    private readonly IJavaDiagnostics _java;
 
-    public SettingsViewModel(ISettingsService settings, ISdkLocator sdk)
+    public SettingsViewModel(ISettingsService settings, ISdkLocator sdk, IJavaDiagnostics java)
     {
         _settings = settings;
         _sdk = sdk;
+        _java = java;
         Reload();
+    }
+
+    [ObservableProperty]
+    private string _javaHomeText = string.Empty;
+
+    [ObservableProperty]
+    private int _goalIndex = 1;
+
+    [ObservableProperty]
+    private int _themeIndex = 2;
+
+    [ObservableProperty]
+    private bool _debugMode;
+
+    public string AppVersion =>
+        typeof(SettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "dev";
+
+    [RelayCommand]
+    private void OpenWizard() => App.MainWindow?.NavigateTo("setup");
+
+    [ObservableProperty]
+    private string _javaReportText = string.Empty;
+
+    [RelayCommand]
+    private void ClearJavaHome() => JavaHomeText = string.Empty;
+
+    /// <summary>Saves the JDK field and runs the real java.exe the SDK tools would get, showing exactly what it reported.</summary>
+    [RelayCommand]
+    private async Task TestJavaAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            var jdk = JavaHomeText.Trim().Trim('"').TrimEnd('\\', '/');
+            _settings.Current.JavaHomeOverride = jdk.Length == 0 ? null : jdk;
+            await _settings.SaveAsync();
+            var report = await _java.ProbeAsync();
+            JavaReportText = string.Join(Environment.NewLine, report.Lines);
+            Message = report.MeetsMinimum
+                ? $"Java {report.Major} will be used by sdkmanager, avdmanager and the emulator."
+                : "This Java cannot be used - see the details below.";
+            MessageIsError = !report.MeetsMinimum;
+        }
+        catch (Exception ex)
+        {
+            Message = $"Java test failed: {ex.Message}";
+            MessageIsError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [ObservableProperty]
@@ -49,6 +104,10 @@ public partial class SettingsViewModel : ObservableObject
     public void Reload()
     {
         SdkRootText = _settings.Current.SdkRootOverride ?? string.Empty;
+        JavaHomeText = _settings.Current.JavaHomeOverride ?? string.Empty;
+        GoalIndex = _settings.Current.SetupGoal == SetupGoals.Phone ? 0 : 1;
+        ThemeIndex = _settings.Current.Theme switch { "System" => 0, "Light" => 1, _ => 2 };
+        DebugMode = _settings.Current.DebugMode;
         TerminalMaxLines = _settings.Current.TerminalMaxLines;
     }
 
@@ -74,7 +133,12 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             _settings.Current.SdkRootOverride = root.Length == 0 ? null : root;
+            var jdk = JavaHomeText.Trim().Trim('"').TrimEnd('\\', '/');
+            _settings.Current.JavaHomeOverride = jdk.Length == 0 ? null : jdk;
             _settings.Current.TerminalMaxLines = (int)TerminalMaxLines;
+            _settings.Current.SetupGoal = GoalIndex == 0 ? SetupGoals.Phone : SetupGoals.Everything;
+            _settings.Current.Theme = ThemeIndex switch { 0 => "System", 1 => "Light", _ => "Dark" };
+            _settings.Current.DebugMode = DebugMode;
             await _settings.SaveAsync();
 
             var status = await _sdk.DetectAsync();

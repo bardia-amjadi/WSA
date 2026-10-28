@@ -34,6 +34,13 @@ public sealed class SdkLocator : ISdkLocator
             var diagnostics = new List<string>();
             var (root, source) = ResolveRoot(diagnostics);
 
+            // Re-read the environment on every detection so a JAVA_HOME/PATH change in Windows is picked up without a restart.
+            var (toolEnv, java) = ToolEnvironmentBuilder.Build(root, _settings.Current);
+            if (java.Problem is not null)
+            {
+                diagnostics.Add(java.Problem);
+            }
+
             var tools = new List<ToolStatus>();
             if (root is null)
             {
@@ -48,8 +55,8 @@ public sealed class SdkLocator : ISdkLocator
             }
             else
             {
-                var env = SdkEnvironment(root);
-                var probes = AllTools.Select(t => ProbeToolAsync(root, t, env, cancellationToken)).ToArray();
+                var env = toolEnv;
+                var probes = AllTools.Select(t => ProbeToolAsync(root, t, env, java, cancellationToken)).ToArray();
                 tools.AddRange(await Task.WhenAll(probes).ConfigureAwait(false));
 
                 foreach (var missing in tools.Where(t => t.Path is null))
@@ -69,7 +76,7 @@ public sealed class SdkLocator : ISdkLocator
                 }
             }
 
-            var status = new SdkStatus(root, source, tools, diagnostics);
+            var status = new SdkStatus(root, source, tools, diagnostics, toolEnv, java);
             Last = status;
             StatusChanged?.Invoke(this, status);
             return status;
@@ -81,19 +88,6 @@ public sealed class SdkLocator : ISdkLocator
     }
 
     internal static readonly SdkTool[] AllTools = { SdkTool.SdkManager, SdkTool.AvdManager, SdkTool.Emulator, SdkTool.Adb };
-
-    internal static IReadOnlyDictionary<string, string> SdkEnvironment(string root)
-    {
-        var env = new Dictionary<string, string> { ["ANDROID_SDK_ROOT"] = root, ["ANDROID_HOME"] = root };
-
-        // A JDK installed by WSA is known to satisfy sdkmanager, so it takes precedence over whatever JAVA_HOME says.
-        if (File.Exists(Configuration.ManagedPaths.JavaExe))
-        {
-            env["JAVA_HOME"] = Configuration.ManagedPaths.JdkDir;
-        }
-
-        return env;
-    }
 
     private (string? Root, string Source) ResolveRoot(List<string> diagnostics)
     {
@@ -207,7 +201,7 @@ public sealed class SdkLocator : ISdkLocator
         || (File.GetUnixFileMode(path) & (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0;
 
     private async Task<ToolStatus> ProbeToolAsync(
-        string root, SdkTool tool, IReadOnlyDictionary<string, string> env, CancellationToken ct)
+        string root, SdkTool tool, IReadOnlyDictionary<string, string> env, JavaResolution java, CancellationToken ct)
     {
         var display = DisplayName(tool);
         var path = FindTool(root, tool);
@@ -236,10 +230,13 @@ public sealed class SdkLocator : ISdkLocator
         {
             var reason = result.StartError
                          ?? ToolOutputParsers.FirstLine(result.StandardError)
+                         ?? ToolOutputParsers.FirstLine(result.StandardOutput)
                          ?? $"exited with code {result.ExitCode}";
             if (tool == SdkTool.SdkManager)
             {
-                reason += " (sdkmanager and avdmanager need a Java runtime; install JDK 17 or newer and make sure JAVA_HOME or PATH points to it.)";
+                // sdkmanager and avdmanager are Java programs. Find out which Java it really got and say so.
+                var report = await JavaProbe.RunAsync(_runner, java, env, ct).ConfigureAwait(false);
+                reason = JavaProbe.ExplainJavaFailure(reason, report);
             }
 
             return new ToolStatus(tool, display, path, null, reason);

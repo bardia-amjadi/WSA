@@ -45,15 +45,24 @@ public sealed class SdkSetupService : ISdkSetupService
     public async Task<SetupState> GetStateAsync(CancellationToken cancellationToken = default)
     {
         var status = _sdk.Last ?? await _sdk.DetectAsync(cancellationToken).ConfigureAwait(false);
-        var managedJdk = File.Exists(ManagedPaths.JavaExe);
-        var sdkManager = status.Get(SdkTool.SdkManager);
-        var jdkReady = managedJdk || sdkManager.IsAvailable;
 
-        var jdkDetail = managedJdk
-            ? $"Installed by WSA at {ManagedPaths.JdkDir}"
-            : sdkManager.IsAvailable
-                ? "A working Java runtime was found on this computer"
-                : "Not installed";
+        // Run the real java.exe the SDK tools would get; "ready" means it exists AND is new enough.
+        var java = await JavaProbe.RunAsync(_runner, status.Java, status.ToolEnvironment, cancellationToken).ConfigureAwait(false);
+        var jdkReady = java.MeetsMinimum;
+        string jdkDetail;
+        if (java.Resolution.JavaExe is null)
+        {
+            jdkDetail = status.Java.Problem ?? "No Java found";
+        }
+        else if (java.Major is null)
+        {
+            jdkDetail = $"{java.Resolution.JavaExe}: the version could not be read";
+        }
+        else
+        {
+            jdkDetail = $"Java {java.Major}{(java.Vendor is null ? string.Empty : $" ({java.Vendor})")} at {java.Resolution.JavaHome ?? java.Resolution.JavaExe}" +
+                        (java.MeetsMinimum ? $"  -  {java.Resolution.Source}" : $"  -  too old, Java {JavaRequirements.MinimumMajor}+ is required");
+        }
 
         var accel = status.Diagnostics.FirstOrDefault(d => d.StartsWith("Hardware acceleration", StringComparison.Ordinal));
 
@@ -65,6 +74,57 @@ public sealed class SdkSetupService : ISdkSetupService
             status.Get(SdkTool.Adb).Path is not null,
             status.Get(SdkTool.Emulator).Path is not null,
             accel);
+    }
+
+    public async Task<OperationResult> ApplyManualSdkRootAsync(string path, CancellationToken cancellationToken = default)
+    {
+        var folder = path.Trim().Trim('"');
+        if (folder.Length == 0 || !Directory.Exists(folder))
+        {
+            return new OperationResult(false, $"That folder does not exist: {folder}");
+        }
+
+        _settings.Current.SdkRootOverride = Path.GetFullPath(folder);
+        await _settings.SaveAsync(cancellationToken).ConfigureAwait(false);
+        var status = await _sdk.DetectAsync(cancellationToken).ConfigureAwait(false);
+
+        var found = status.Tools.Where(t => t.Path is not null).Select(t => t.DisplayName).ToList();
+        var missing = status.Tools.Where(t => t.Path is null).Select(t => t.DisplayName).ToList();
+        return new OperationResult(true,
+            $"SDK folder set to {status.SdkRoot}. Found: {(found.Count == 0 ? "nothing yet" : string.Join(", ", found))}." +
+            (missing.Count == 0 ? string.Empty : $" Not found there: {string.Join(", ", missing)}."));
+    }
+
+    public async Task<OperationResult> ApplyManualJavaHomeAsync(string path, CancellationToken cancellationToken = default)
+    {
+        var folder = path.Trim().Trim('"').TrimEnd('\\', '/');
+        var javaFile = OperatingSystem.IsWindows() ? "java.exe" : "java";
+        var javaExe = Path.Combine(folder, "bin", javaFile);
+        if (folder.Length == 0 || !File.Exists(javaExe))
+        {
+            return new OperationResult(false, $"Choose the JDK folder itself, the one that contains bin\\{javaFile}. Not found: {javaExe}");
+        }
+
+        // Run the candidate exactly as the SDK tools would, and only accept it if it is really new enough.
+        var candidate = new JavaResolution(folder, "WSA Settings (candidate)", javaExe, null, Array.Empty<string>());
+        var env = new Dictionary<string, string> { ["JAVA_HOME"] = folder };
+        var report = await JavaProbe.RunAsync(_runner, candidate, env, cancellationToken).ConfigureAwait(false);
+        if (report.Major is null)
+        {
+            return new OperationResult(false, $"{javaExe} did not report a Java version:\n{string.Join('\n', report.Lines)}");
+        }
+
+        if (!report.MeetsMinimum)
+        {
+            return new OperationResult(false,
+                $"That folder contains Java {report.Major}, but Java {JavaRequirements.MinimumMajor} or newer is required.");
+        }
+
+        _settings.Current.JavaHomeOverride = folder;
+        await _settings.SaveAsync(cancellationToken).ConfigureAwait(false);
+        await _sdk.DetectAsync(cancellationToken).ConfigureAwait(false);
+        return new OperationResult(true,
+            $"Java {report.Major} at {folder} will be used for sdkmanager, avdmanager and the emulator.");
     }
 
     public async Task<string> EnsureSdkRootAsync(CancellationToken cancellationToken = default)

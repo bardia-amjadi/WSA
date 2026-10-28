@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using WSA.Core.Models;
 
 namespace WSA.App.ViewModels;
@@ -93,6 +94,7 @@ public abstract partial class OperationViewModelBase : ObservableObject
         catch (Exception ex) when (ex is ToolFailedException or ToolUnavailableException)
         {
             ErrorMessage = ex.Message;
+            App.Services?.GetService<WSA.Core.Interfaces.IAppLog>()?.Error("operation", $"{title} failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -105,6 +107,7 @@ public abstract partial class OperationViewModelBase : ObservableObject
         catch (Exception ex)
         {
             ErrorMessage = $"Unexpected error: {ex.Message}";
+            App.Services?.GetService<WSA.Core.Interfaces.IAppLog>()?.Error("operation", title, ex);
         }
         finally
         {

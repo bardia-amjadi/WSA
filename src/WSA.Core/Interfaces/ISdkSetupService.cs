@@ -11,6 +11,12 @@ public interface ISdkSetupService
 {
     Task<SetupState> GetStateAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Manual route: uses an SDK folder the user already has. Saves it to Settings and re-detects. Fails only if the folder does not exist.</summary>
+    Task<OperationResult> ApplyManualSdkRootAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>Manual route: uses a JDK the user already has (folder containing bin\java.exe). Verifies it runs, saves it and re-detects.</summary>
+    Task<OperationResult> ApplyManualJavaHomeAsync(string path, CancellationToken cancellationToken = default);
+
     /// <summary>Creates the SDK folder if needed and remembers it in Settings when no SDK was configured. Returns the root.</summary>
     Task<string> EnsureSdkRootAsync(CancellationToken cancellationToken = default);
 

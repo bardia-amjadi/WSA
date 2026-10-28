@@ -7,8 +7,26 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
+    <Grid x:Name="Root">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="40" />
+        <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <Grid x:Name="AppTitleBar" Padding="16,0,140,0" ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <FontIcon Glyph="&#xE8EA;" FontSize="16" VerticalAlignment="Center"
+                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+        <TextBlock Grid.Column="1" Text="WSA" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" />
+    </Grid>
+
     <NavigationView
         x:Name="Nav"
+        Grid.Row="1"
         PaneDisplayMode="Left"
         OpenPaneLength="232"
         IsBackButtonVisible="Collapsed"
@@ -16,13 +34,13 @@
         SelectionChanged="Nav_SelectionChanged">
         <NavigationView.MenuItems>
             <NavigationViewItem Content="Overview" Tag="overview" Icon="Home" />
-            <NavigationViewItem Content="Virtual Devices" Tag="devices">
+            <NavigationViewItem x:Name="DevicesItem" Content="Virtual Devices" Tag="devices">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE8EA;" />
                 </NavigationViewItem.Icon>
             </NavigationViewItem>
             <NavigationViewItem Content="Phone" Tag="phone" Icon="CellPhone" />
-            <NavigationViewItem Content="Android Store" Tag="store" Icon="Shop" />
+            <NavigationViewItem x:Name="StoreItem" Content="Android Store" Tag="store" Icon="Shop" />
             <NavigationViewItem Content="WSA Terminal" Tag="terminal">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE756;" />
@@ -32,9 +50,11 @@
             <NavigationViewItem Content="Runtime &amp; SDK" Tag="runtime" Icon="Library" />
         </NavigationView.MenuItems>
         <NavigationView.FooterMenuItems>
+            <NavigationViewItem x:Name="DebugItem" Content="Debug" Tag="debug" Icon="Repair" Visibility="Collapsed" />
             <NavigationViewItem Content="Settings" Tag="settings" Icon="Setting" />
         </NavigationView.FooterMenuItems>
 
         <Frame x:Name="ContentFrame" />
     </NavigationView>
+    </Grid>
 </Window>

@@ -17,6 +17,8 @@ public sealed partial class SetupPage : Page
     private async void Page_Loaded(object sender, RoutedEventArgs e)
     {
         ViewModel.ConfirmLicensesAsync = text => Dialogs.ConfirmLicensesAsync(XamlRoot, text);
+        ViewModel.ConfirmAsync = (title, message, button) => Dialogs.ConfirmAsync(XamlRoot, title, message, button);
+        ViewModel.PickFolderAsync = Dialogs.PickFolderAsync;
         await ViewModel.LoadAsync();
     }
 }

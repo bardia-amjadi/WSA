@@ -7,6 +7,7 @@ using WSA.Infrastructure.AndroidSdk;
 using WSA.Infrastructure.Adb;
 using WSA.Infrastructure.Configuration;
 using WSA.Infrastructure.Emulator;
+using WSA.Infrastructure.Logging;
 using WSA.Infrastructure.ProcessExecution;
 using WSA.Infrastructure.Setup;
 
@@ -44,9 +45,14 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<ISettingsService, SettingsService>(_ => new SettingsService());
+        services.AddSingleton<IAppLog>(sp => new AppLog(sp.GetRequiredService<ISettingsService>()));
+        services.AddSingleton<ProcessRunner>();
+        services.AddSingleton<IProcessRunner>(sp =>
+            new LoggingProcessRunner(sp.GetRequiredService<ProcessRunner>(), sp.GetRequiredService<IAppLog>()));
+        services.AddSingleton<DebugViewModel>();
         services.AddSingleton<ISdkLocator, SdkLocator>();
+        services.AddSingleton<IJavaDiagnostics, JavaDiagnosticsService>();
         services.AddSingleton<IToolCommandFactory, ToolCommandFactory>();
         services.AddSingleton<IAdbService, AdbService>();
         services.AddSingleton<IAvdService, AvdService>();
@@ -73,6 +79,7 @@ public partial class App : Application
         // Record the crash for bug reports; do not mark it handled, so failures are never hidden.
         try
         {
+            Services?.GetService<IAppLog>()?.Error("crash", "Unhandled exception", e.Exception);
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WSA");
             Directory.CreateDirectory(dir);
             File.AppendAllText(

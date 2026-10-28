@@ -33,7 +33,7 @@ public sealed class ToolCommandFactory : IToolCommandFactory
         }
 
         // A tool whose probe failed (e.g. no Java) is still launchable so the user can see its real error output.
-        return new CommandRequest(toolStatus.Path, args, status.SdkRoot, SdkLocator.SdkEnvironment(status.SdkRoot));
+        return new CommandRequest(toolStatus.Path, args, status.SdkRoot, status.ToolEnvironment);
     }
 
     public CommandRequest? TryCreateRelative(string relativePath, IReadOnlyList<string> args, out string? error)
@@ -66,7 +66,7 @@ public sealed class ToolCommandFactory : IToolCommandFactory
 
             if (File.Exists(candidate))
             {
-                return new CommandRequest(candidate, args, status.SdkRoot, SdkLocator.SdkEnvironment(status.SdkRoot));
+                return new CommandRequest(candidate, args, status.SdkRoot, status.ToolEnvironment);
             }
         }
 

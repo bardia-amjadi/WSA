@@ -24,7 +24,7 @@ public sealed record InvalidAction(string Message) : TerminalAction;
 public static class TerminalCommandParser
 {
     public static readonly IReadOnlyList<string> BuiltIns =
-        new[] { "help", "clear", "sdk", "avds", "devices", "versions", "refresh" };
+        new[] { "help", "clear", "sdk", "avds", "devices", "versions", "refresh", "java" };
 
     public static TerminalAction Parse(string input)
     {

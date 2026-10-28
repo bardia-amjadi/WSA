@@ -41,6 +41,20 @@ internal static class Dialogs
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
+    /// <summary>Folder picker for the unpackaged app: the picker must be attached to the main window handle.</summary>
+    public static async Task<string?> PickFolderAsync()
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        if (App.MainWindow is { } window)
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(window));
+        }
+
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    }
+
     public static async Task<bool> ConfirmAsync(XamlRoot root, string title, string message, string primaryText)
     {
         var dialog = new ContentDialog

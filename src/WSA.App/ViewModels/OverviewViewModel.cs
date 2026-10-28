@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSA.Core.Interfaces;
 using WSA.Core.Models;
+using WSA.Core.Services;
 
 namespace WSA.App.ViewModels;
 
@@ -10,11 +11,13 @@ public partial class OverviewViewModel : ObservableObject
 {
     private readonly ISdkLocator _sdk;
     private readonly IAvdService _avds;
+    private readonly ISettingsService _settings;
 
-    public OverviewViewModel(ISdkLocator sdk, IAvdService avds)
+    public OverviewViewModel(ISdkLocator sdk, IAvdService avds, ISettingsService settings)
     {
         _sdk = sdk;
         _avds = avds;
+        _settings = settings;
     }
 
     [ObservableProperty]
@@ -83,10 +86,13 @@ public partial class OverviewViewModel : ObservableObject
     {
         SdkRoot = status.SdkRoot ?? "No Android SDK found";
         SdkSource = status.SdkRootSource;
-        NeedsSetup = !status.IsComplete;
+        NeedsSetup = !SetupRequirements.IsSatisfied(_settings.Current, status);
+        var phoneOnly = _settings.Current.SetupGoal == SetupGoals.Phone;
 
         var ready = status.Tools.Count(t => t.IsAvailable);
-        RuntimeHeadline = status.IsComplete
+        RuntimeHeadline = phoneOnly
+            ? (status.Get(SdkTool.Adb).IsAvailable ? "Ready to connect a phone (adb installed)" : "adb is not installed yet")
+            : status.IsComplete
             ? "Android SDK ready"
             : status.SdkRoot is null
                 ? "Android SDK not found"

@@ -23,13 +23,16 @@ public sealed class TerminalService
     private readonly IToolCommandFactory _tools;
     private readonly IProcessRunner _runner;
     private readonly IAvdService _avds;
+    private readonly IJavaDiagnostics _java;
 
-    public TerminalService(ISdkLocator sdk, IToolCommandFactory tools, IProcessRunner runner, IAvdService avds)
+    public TerminalService(
+        ISdkLocator sdk, IToolCommandFactory tools, IProcessRunner runner, IAvdService avds, IJavaDiagnostics java)
     {
         _sdk = sdk;
         _tools = tools;
         _runner = runner;
         _avds = avds;
+        _java = java;
     }
 
     public async Task<TerminalOutcome> ExecuteAsync(
@@ -143,6 +146,19 @@ public sealed class TerminalService
                 ReportSdk(output, versionsOnly: action.Name == "versions");
                 return new TerminalOutcome(false, 0, false, false, sw.Elapsed);
 
+            case "java":
+            {
+                Info("Probing the Java that sdkmanager, avdmanager and the emulator are given...");
+                var report = await _java.ProbeAsync(ct).ConfigureAwait(false);
+                foreach (var line in report.Lines)
+                {
+                    output.Report(new OutputLine(
+                        line.StartsWith("PROBLEM", StringComparison.Ordinal) ? OutputKind.StandardError : OutputKind.Info, line));
+                }
+
+                return new TerminalOutcome(false, report.MeetsMinimum ? 0 : 1, false, !report.MeetsMinimum, sw.Elapsed);
+            }
+
             case "devices":
             {
                 var request = _tools.TryCreate(SdkTool.Adb, new[] { "devices", "-l" }, out var error);
@@ -222,6 +238,7 @@ public sealed class TerminalService
         "  sdk | versions | refresh     show / re-detect SDK path, tools, versions and diagnostics",
         "  avds                         list virtual devices and whether they are running",
         "  devices                      adb devices -l",
+        "  java                         show which java.exe, JAVA_HOME and version the SDK tools get",
         "  clear | help",
         "",
         "SDK tools (arguments are passed through unchanged):",

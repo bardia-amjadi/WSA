@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WSA.App.Views;
 using WSA.Core.Interfaces;
+using WSA.Core.Models;
 
 namespace WSA.App;
 
@@ -14,8 +15,43 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Title = "WSA - Windows Subsystem for Android";
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 820));
+
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBar);
+        AppWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+        AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
+
         Nav.SelectedItem = Nav.MenuItems[0];
         Nav.Loaded += Nav_Loaded;
+
+        var settings = App.GetService<ISettingsService>();
+        _dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        settings.Changed += (_, _) => _dispatcher.TryEnqueue(ApplySettings);
+        ApplySettings();
+    }
+
+    private readonly Microsoft.UI.Dispatching.DispatcherQueue _dispatcher;
+
+    /// <summary>Applies theme and shows only the pages the chosen goal and debug mode need.</summary>
+    private void ApplySettings()
+    {
+        var s = App.GetService<ISettingsService>().Current;
+        Root.RequestedTheme = s.Theme switch
+        {
+            "Light" => ElementTheme.Light,
+            "System" => ElementTheme.Default,
+            _ => ElementTheme.Dark,
+        };
+
+        var virtualDevices = s.SetupGoal != SetupGoals.Phone;
+        DevicesItem.Visibility = virtualDevices ? Visibility.Visible : Visibility.Collapsed;
+        StoreItem.Visibility = virtualDevices ? Visibility.Visible : Visibility.Collapsed;
+        DebugItem.Visibility = s.DebugMode ? Visibility.Visible : Visibility.Collapsed;
+
+        if (Nav.SelectedItem is NavigationViewItem { Visibility: Visibility.Collapsed })
+        {
+            NavigateTo("overview");
+        }
     }
 
     /// <summary>Selects a navigation item by tag and shows its page, optionally passing a parameter to the page.</summary>
@@ -45,19 +81,13 @@ public sealed partial class MainWindow : Window
     {
         Nav.Loaded -= Nav_Loaded;
 
-        // First run: if the SDK is not fully installed, start on Setup instead of an Overview full of "missing".
-        try
+        // First run: start in the setup wizard until it has been completed once.
+        if (!App.GetService<ISettingsService>().Current.WizardCompleted)
         {
-            var status = await App.GetService<ISdkLocator>().DetectAsync();
-            if (!status.IsComplete)
-            {
-                NavigateTo("setup");
-            }
+            NavigateTo("setup");
         }
-        catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException or IOException)
-        {
-            // Detection problems are shown on the Overview and Runtime pages; stay where we are.
-        }
+
+        await Task.CompletedTask;
     }
 
     private void Nav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -84,6 +114,7 @@ public sealed partial class MainWindow : Window
         "terminal" => typeof(TerminalPage),
         "setup" => typeof(SetupPage),
         "runtime" => typeof(RuntimePage),
+        "debug" => typeof(DebugPage),
         "settings" => typeof(SettingsPage),
         _ => typeof(OverviewPage),
     };

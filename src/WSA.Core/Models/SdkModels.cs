@@ -19,7 +19,9 @@ public sealed record SdkStatus(
     string? SdkRoot,
     string SdkRootSource,
     IReadOnlyList<ToolStatus> Tools,
-    IReadOnlyList<string> Diagnostics)
+    IReadOnlyList<string> Diagnostics,
+    IReadOnlyDictionary<string, string> ToolEnvironment,
+    JavaResolution Java)
 {
     public ToolStatus Get(SdkTool tool) => Tools.First(t => t.Tool == tool);
     public bool IsComplete => SdkRoot is not null && Tools.All(t => t.IsAvailable);
