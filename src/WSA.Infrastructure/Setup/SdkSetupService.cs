@@ -331,9 +331,10 @@ public sealed class SdkSetupService : ISdkSetupService
         var text = result.StandardOutput + result.StandardError;
         if (!text.Contains("All SDK package licenses accepted", StringComparison.OrdinalIgnoreCase))
         {
+            var detail = string.Join(" | ", text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).Take(6));
             throw new ToolFailedException(
-                "sdkmanager did not confirm that the licenses were accepted: " +
-                (ToolOutputParsers.FirstLine(result.StandardError) ?? $"exit code {result.ExitCode}"));
+                "sdkmanager did not confirm that the licenses were accepted " +
+                $"(exit code {result.ExitCode}). Its output: {(detail.Length == 0 ? "(none)" : detail)}");
         }
     }
 

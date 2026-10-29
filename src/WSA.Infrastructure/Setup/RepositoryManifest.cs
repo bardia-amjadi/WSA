@@ -11,7 +11,51 @@ public static class RepositoryManifest
     public const string IndexUrl = "https://dl.google.com/android/repository/repository2-3.xml";
     private const string DownloadBase = "https://dl.google.com/android/repository/";
 
-    public static RemoteArchive FindWindowsCommandLineTools(string xml) => FindWindowsArchive(xml, "cmdline-tools;latest");
+    /// <summary>
+    /// Command-line tools 23.0 and newer print "sdkmanager is deprecated. Android CLI will be used instead" and no longer show
+    /// or accept licenses the way WSA drives sdkmanager (<c>--licenses</c> with scripted input). Until WSA supports the new
+    /// Android CLI, the newest classic release (major version 22 or lower) is used.
+    /// </summary>
+    public const int NewestClassicMajor = 22;
+
+    public static RemoteArchive FindWindowsCommandLineTools(string xml)
+    {
+        XDocument doc;
+        try
+        {
+            doc = XDocument.Parse(xml);
+        }
+        catch (System.Xml.XmlException ex)
+        {
+            throw new ToolFailedException($"Google's SDK repository index could not be parsed: {ex.Message}");
+        }
+
+        var versioned = doc.Descendants()
+            .Where(e => e.Name.LocalName == "remotePackage")
+            .Select(e => (string?)e.Attribute("path"))
+            .Where(p => p is not null)
+            .Select(p => (Path: p!, Match: System.Text.RegularExpressions.Regex.Match(p!, @"^cmdline-tools;(\d+)\.(\d+)$")))
+            .Where(x => x.Match.Success)
+            .Select(x => (x.Path, Major: int.Parse(x.Match.Groups[1].Value), Minor: int.Parse(x.Match.Groups[2].Value)))
+            .Where(x => x.Major <= NewestClassicMajor)
+            .OrderByDescending(x => x.Major).ThenByDescending(x => x.Minor)
+            .ToList();
+
+        foreach (var candidate in versioned)
+        {
+            try
+            {
+                return FindWindowsArchive(xml, candidate.Path);
+            }
+            catch (ToolFailedException)
+            {
+                // No usable Windows archive for this version; try the next older one.
+            }
+        }
+
+        // No classic release is listed: fall back to whatever "latest" is, so setup still works (licenses may need the new tool).
+        return FindWindowsArchive(xml, "cmdline-tools;latest");
+    }
 
     public static RemoteArchive FindWindowsArchive(string xml, string packagePath)
     {
