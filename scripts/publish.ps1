@@ -27,6 +27,13 @@ try {
 
     Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
 
+    # Setup package: the same files plus a marker. When this folder is run, WSA shows the installer (install / repair / uninstall)
+    # instead of the app. The installed copy has no marker and starts normally.
+    $setupDir = Join-Path $root 'artifacts/setup'
+    Copy-Item -Path $publishDir -Destination $setupDir -Recurse
+    @{ kind = 'setup-package'; version = $Version } | ConvertTo-Json | Set-Content -Path (Join-Path $setupDir 'setup.json') -Encoding utf8
+    Compress-Archive -Path (Join-Path $setupDir '*') -DestinationPath (Join-Path $root 'artifacts/WSA-Setup-win-x64.zip') -CompressionLevel Optimal
+
     $info = @(
         "WSA build info",
         "Version:   $Version",

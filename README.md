@@ -36,6 +36,22 @@ This is an early **Phase 1 + 2 + 3** release (foundation, virtual-device lifecyc
 | Custom title bar, consistent cards and spacing | Implemented (Phase 5), untested; visual quality not yet judged on a real screen |
 | MSIX package | **Not produced** (see Packaging) |
 
+## Installer, packages and offline bundle
+
+WSA ships a **setup package** (`WSA-Setup-win-x64.zip`). Extract it and run `WSA.exe`: because the folder contains `setup.json`, WSA opens its installer window instead of the app.
+
+- **Install**: copies WSA to `%LOCALAPPDATA%\Programs\WSA` (per user, no administrator rights), writes `install-manifest.json` (SHA-256 of every file), adds a Start menu shortcut and a Windows *Apps & features* entry (Uninstall / Modify).
+- **Packages** (each can be ticked or not): Java (Microsoft OpenJDK 21), Android SDK tools (command-line tools, platform-tools, emulator) and one system image, **Android 14 (API 34) Google APIs x86_64**.
+- **Repair**: re-verifies the app files and reinstalls missing or broken packages. Run from a setup package it also re-copies all app files, which updates an older install. Run from the installed copy it can only report damaged app files; restoring them needs the package.
+- **Uninstall**: removes the app, shortcut and Windows entry, and optionally the JDK, the SDK and the image. An SDK folder that WSA did not create (no `.wsa-managed` marker) is never deleted. Uninstall runs from a temporary copy so it can delete the files it normally runs from.
+- Open it later from *Settings -> Repair or uninstall WSA*, or from Windows' installed-apps list.
+
+**Online package (default, can be published):** the packages are downloaded from their vendors at install time with the same checksum-verified code the in-app Setup uses; Google's license text is shown and must be accepted.
+
+**Offline package (personal use only):** Google's Android SDK license does not allow redistributing the SDK or system images, so this is not a release asset. Run the workflow manually (*Actions -> Build WSA -> Run workflow*) with both **offline** and **accept_android_sdk_license** ticked. `WSA.BundleTool` downloads everything on the runner, verifies it, and the workflow uploads `WSA-Setup-Offline-win-x64.zip` (about 2 GB, kept 7 days) as a workflow artifact. Its installer verifies each file's SHA-256 before extracting and requires you to tick the Android SDK license checkbox.
+
+Status: **never run on Windows yet.** Known limits: the setup package is a folder (WinUI 3 cannot be a single-file `.exe`); the installer is not code-signed, so SmartScreen will warn; no MSI/MSIX.
+
 ## Architecture
 
 - `src/WSA.Core` - models, interfaces, command tokenizer/parser, output parsers, `TerminalService`. No Windows dependencies.

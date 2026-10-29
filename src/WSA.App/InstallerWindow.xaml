@@ -1,0 +1,119 @@
+<Window
+    x:Class="WSA.App.InstallerWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WSA.App.ViewModels">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root" Loaded="Root_Loaded">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="TitleBar" Padding="16,0,140,0" ColumnSpacing="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Glyph="&#xE8EA;" FontSize="16" VerticalAlignment="Center"
+                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <TextBlock Grid.Column="1" Text="WSA Setup" VerticalAlignment="Center"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="32,8,32,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind ViewModel.Heading, Mode=OneWay}" />
+                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="{x:Bind ViewModel.Subheading, Mode=OneWay}" />
+                </StackPanel>
+
+                <!-- Choose -->
+                <StackPanel Spacing="14" Visibility="{x:Bind ViewModel.ShowChoose, Mode=OneWay}">
+                    <RadioButtons SelectedIndex="{x:Bind ViewModel.ActionIndex, Mode=TwoWay}" MaxColumns="2"
+                                  Visibility="{x:Bind ViewModel.IsMaintenanceMode, Mode=OneWay}">
+                        <RadioButton Content="Repair" />
+                        <RadioButton Content="Uninstall" />
+                    </RadioButtons>
+
+                    <Border Style="{StaticResource CardBorderStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Items" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.Rows, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ComponentRow">
+                                        <Grid ColumnSpacing="12" Margin="0,4,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{x:Bind Title}" />
+                                                <TextBlock Text="{x:Bind Detail}" Style="{StaticResource MutedTextStyle}"
+                                                           FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{x:Bind Status}" VerticalAlignment="Center"
+                                                       Style="{StaticResource MutedTextStyle}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <CheckBox Visibility="{x:Bind ViewModel.ShowLicenseCheck, Mode=OneWay}"
+                              IsChecked="{x:Bind ViewModel.AcceptSdkLicense, Mode=TwoWay}"
+                              Content="I accept the Android SDK License Agreement (developer.android.com/studio/terms) for the Android SDK tools and system image in this package." />
+                    <CheckBox Visibility="{x:Bind ViewModel.IsRemoveAction, Mode=OneWay}"
+                              IsChecked="{x:Bind ViewModel.RemoveUserData, Mode=TwoWay}"
+                              Content="Also delete WSA settings, logs and downloads (%LOCALAPPDATA%\WSA)" />
+                    <TextBlock Visibility="{x:Bind ViewModel.IsRemoveAction, Mode=OneWay}" Style="{StaticResource MutedTextStyle}"
+                               Text="An Android SDK folder that WSA did not create is never deleted." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="{x:Bind ViewModel.StartText, Mode=OneWay}" Style="{StaticResource AccentButtonStyle}"
+                                Command="{x:Bind ViewModel.StartCommand}" />
+                        <Button Content="Close" Command="{x:Bind ViewModel.CloseWindowCommand}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Working -->
+                <Border Style="{StaticResource CardBorderStyle}" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{x:Bind ViewModel.OperationText, Mode=OneWay}" TextWrapping="Wrap" />
+                        <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsIndeterminate, Mode=OneWay}"
+                                     Minimum="0" Maximum="100" Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}" />
+                        <ListView ItemsSource="{x:Bind ViewModel.OperationLog}" SelectionMode="None" MaxHeight="180">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{x:Bind}" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                                               TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <Button Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" IsClosable="False" Severity="Error"
+                         Title="Problem" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
+                <InfoBar IsOpen="{x:Bind ViewModel.HasSuccess, Mode=OneWay}" IsClosable="False" Severity="Success"
+                         Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" />
+
+                <!-- Done -->
+                <StackPanel Orientation="Horizontal" Spacing="10" Visibility="{x:Bind ViewModel.IsDone, Mode=OneWay}">
+                    <Button Content="Start WSA" Style="{StaticResource AccentButtonStyle}"
+                            Command="{x:Bind ViewModel.LaunchAppCommand}"
+                            Visibility="{x:Bind ViewModel.CanLaunch, Mode=OneWay}" />
+                    <Button Content="Close" Command="{x:Bind ViewModel.CloseWindowCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

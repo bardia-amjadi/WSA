@@ -79,6 +79,8 @@
                     <ToggleSwitch Header="Debug mode" IsOn="{x:Bind ViewModel.DebugMode, Mode=TwoWay}"
                                   OnContent="On: commands and output are logged; the Debug page is shown"
                                   OffContent="Off: only errors are logged" />
+                    <Button Content="Repair or uninstall WSA..." Command="{x:Bind ViewModel.OpenInstallerCommand}"
+                            Visibility="{x:Bind ViewModel.IsInstalledCopy}" />
                     <TextBlock Style="{StaticResource MutedTextStyle}"
                                Text="{x:Bind ViewModel.AppVersion}" />
                 </StackPanel>

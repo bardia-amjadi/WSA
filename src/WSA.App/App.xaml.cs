@@ -7,6 +7,8 @@ using WSA.Infrastructure.AndroidSdk;
 using WSA.Infrastructure.Adb;
 using WSA.Infrastructure.Configuration;
 using WSA.Infrastructure.Emulator;
+using WSA.Infrastructure.Installer;
+using WSA.Core.Models;
 using WSA.Infrastructure.Logging;
 using WSA.Infrastructure.ProcessExecution;
 using WSA.Infrastructure.Setup;
@@ -18,6 +20,8 @@ public partial class App : Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     public static MainWindow? MainWindow { get; private set; }
+
+    public static InstallerWindow? InstallerWindow { get; private set; }
 
     /// <summary>Set when settings.json existed but could not be read; surfaced on the Overview page.</summary>
     public static string? StartupWarning { get; private set; }
@@ -32,10 +36,28 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Setup package, "Modify/Uninstall" from Windows, or Settings -> Repair: show the installer instead of the app.
+        var launchArgs = InstallerBootstrap.Args;
+        var installerMode = InstallerBootstrap.DetermineMode(launchArgs);
+        if (installerMode is InstallerMode.Maintenance or InstallerMode.Uninstall && InstallerBootstrap.NeedsRelaunch(launchArgs))
+        {
+            // Maintenance must not delete the files it runs from, so continue from a temporary copy.
+            InstallerBootstrap.RelaunchFromTemp(launchArgs);
+            Exit();
+            return;
+        }
+
         Services = BuildServices();
 
         // Settings are a small local file; load them before the window so every page sees real configuration.
         StartupWarning = await GetService<ISettingsService>().LoadAsync();
+
+        if (installerMode is { } mode)
+        {
+            InstallerWindow = new InstallerWindow(mode);
+            InstallerWindow.Activate();
+            return;
+        }
 
         MainWindow = new MainWindow();
         MainWindow.Activate();
@@ -70,6 +92,9 @@ public partial class App : Application
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<SetupViewModel>();
         services.AddSingleton<StoreViewModel>();
+        services.AddSingleton<AppInstaller>();
+        services.AddSingleton<InstallerService>();
+        services.AddSingleton<InstallerViewModel>();
 
         return services.BuildServiceProvider();
     }

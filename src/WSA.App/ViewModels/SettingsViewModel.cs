@@ -34,6 +34,26 @@ public partial class SettingsViewModel : ObservableObject
     public string AppVersion =>
         typeof(SettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "dev";
 
+    public bool IsInstalledCopy => WSA.Infrastructure.Installer.InstallLayout.RunsFromInstallDir;
+
+    /// <summary>Starts the installer in maintenance mode (repair / uninstall) and closes the app so its files are not in use.</summary>
+    [RelayCommand]
+    private void OpenInstaller()
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+            psi.ArgumentList.Add("--maintenance");
+            System.Diagnostics.Process.Start(psi)?.Dispose();
+            Microsoft.UI.Xaml.Application.Current.Exit();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Message = $"Could not start the installer: {ex.Message}";
+            MessageIsError = true;
+        }
+    }
+
     [RelayCommand]
     private void OpenWizard() => App.MainWindow?.NavigateTo("setup");
 
