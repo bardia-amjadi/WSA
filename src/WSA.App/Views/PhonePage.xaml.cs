@@ -25,10 +25,48 @@ public sealed partial class PhonePage : Page
     private void Page_Loaded(object sender, RoutedEventArgs e)
     {
         ViewModel.ConfirmAsync = (title, message, button) => Dialogs.ConfirmAsync(XamlRoot, title, message, button);
+        ViewModel.PropertyChanged += OnViewModelChanged;
         ViewModel.StartWatching();
+        TryAutoOpenDesktop();
     }
 
-    private void Page_Unloaded(object sender, RoutedEventArgs e) => ViewModel.StopWatching();
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
+    {
+        ViewModel.PropertyChanged -= OnViewModelChanged;
+        ViewModel.StopWatching();
+    }
+
+    private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PhoneViewModel.IsDeviceReady) or nameof(PhoneViewModel.SelectedDevice))
+        {
+            TryAutoOpenDesktop();
+        }
+    }
+
+    /// <summary>When a phone is connected and ready, show its desktop (unless the user just came back from it).</summary>
+    private void TryAutoOpenDesktop()
+    {
+        if (ViewModel.SelectedDevice is not { IsReady: true } device)
+        {
+            PhoneDesktopPage.DismissedSerial = null;
+            return;
+        }
+
+        if (device.Serial != PhoneDesktopPage.DismissedSerial)
+        {
+            App.MainWindow?.OpenDesktop(device.Serial);
+        }
+    }
+
+    private void OpenDesktop_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedDevice is { IsReady: true } device)
+        {
+            PhoneDesktopPage.DismissedSerial = null;
+            App.MainWindow?.OpenDesktop(device.Serial);
+        }
+    }
 
     private async void InstallAdb_Click(object sender, RoutedEventArgs e) => await ViewModel.InstallAdbAsync();
 

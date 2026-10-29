@@ -80,6 +80,15 @@ public partial class App : Application
         services.AddSingleton<IAvdService, AvdService>();
         services.AddSingleton<IAvdLifecycleService, AvdLifecycleService>();
         services.AddSingleton<IPhoneService, PhoneService>();
+        services.AddSingleton<IPhoneToolsService, PhoneToolsService>();
+        services.AddSingleton<IScreenStreamService, ScreenStreamService>();
+        services.AddTransient<FilesViewModel>();
+        services.AddTransient<TerminalAppViewModel>();
+        services.AddTransient<ToolsViewModel>();
+        services.AddTransient<AppsViewModel>();
+        services.AddTransient<PhoneSettingsViewModel>();
+        services.AddTransient<LiveViewViewModel>();
+        services.AddTransient<PhoneDesktopViewModel>();
         services.AddSingleton<PhoneViewModel>();
         services.AddSingleton<TerminalService>();
         services.AddSingleton<FileDownloader>();

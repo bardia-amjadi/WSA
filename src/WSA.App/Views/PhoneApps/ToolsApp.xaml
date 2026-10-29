@@ -1,0 +1,105 @@
+<UserControl
+    x:Class="WSA.App.Views.PhoneApps.ToolsApp"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="UserControl_Loaded">
+
+    <Grid Padding="10" RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ScrollViewer>
+            <StackPanel Spacing="10" Padding="0,0,10,0">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Capture" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Screenshot" Command="{x:Bind ViewModel.ScreenshotCommand}" />
+                            <Button Content="Record 10 s" Command="{x:Bind ViewModel.RecordCommand}" CommandParameter="10" />
+                            <Button Content="Record 30 s" Command="{x:Bind ViewModel.RecordCommand}" CommandParameter="30" />
+                            <Button Content="Open folder" Command="{x:Bind ViewModel.OpenOutputFolderCommand}" />
+                        </StackPanel>
+                        <TextBlock Text="Saved to Pictures\WSA. Recordings use the phone's own screenrecord (max 180 s)." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Connectivity and display" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="Wi-Fi" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="On" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="wifi:on" />
+                            <Button Grid.Column="2" Content="Off" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="wifi:off" />
+                        </Grid>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="Mobile data" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="On" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="data:on" />
+                            <Button Grid.Column="2" Content="Off" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="data:off" />
+                        </Grid>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="Stay awake" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="On" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="stayawake:on" />
+                            <Button Grid.Column="2" Content="Off" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="stayawake:off" />
+                        </Grid>
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="Show touches" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="On" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="touches:on" />
+                            <Button Grid.Column="2" Content="Off" Command="{x:Bind ViewModel.SwitchCommand}" CommandParameter="touches:off" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Brightness" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Slider Minimum="1" Maximum="100" Value="{x:Bind ViewModel.Brightness, Mode=TwoWay}" />
+                            <Button Grid.Column="1" Content="Apply" Command="{x:Bind ViewModel.ApplyBrightnessCommand}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Wireless adb" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Switch to Wi-Fi (port 5555)" Command="{x:Bind ViewModel.WifiAdbCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Power" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Restart" Command="{x:Bind ViewModel.RebootCommand}" CommandParameter="system" />
+                            <Button Content="Recovery" Command="{x:Bind ViewModel.RebootCommand}" CommandParameter="recovery" />
+                            <Button Content="Bootloader" Command="{x:Bind ViewModel.RebootCommand}" CommandParameter="bootloader" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="1" Spacing="6">
+            <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{x:Bind ViewModel.OperationText, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                               Style="{StaticResource CaptionTextBlockStyle}" />
+                    <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsIndeterminate, Mode=OneWay}" Minimum="0" Maximum="100"
+                                 Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
+            </Grid>
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" IsClosable="False" Severity="Error"
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.HasSuccess, Mode=OneWay}" IsClosable="False" Severity="Success"
+                     Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

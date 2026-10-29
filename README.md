@@ -23,7 +23,9 @@ This is an early **Phase 1 + 2 + 3** release (foundation, virtual-device lifecyc
 | **Setup** page: installs a private JDK (Microsoft OpenJDK 21, SHA-256 checked), Google's command-line tools (SHA-1 from Google's index), platform-tools and emulator via `sdkmanager`; license screen with explicit Accept; first-run redirect | Implemented (Phase 3), untested |
 | **Android Store** page: lists x86_64 system images (Google Play / Google APIs / AOSP) from `sdkmanager --list`, Install / Remove with progress and Cancel, free-space check, jump to *Create virtual device* | Implemented (Phase 3), untested |
 | **Phone** page: real phone over USB or Wi-Fi (adb pair/connect), device info, live view with click-to-tap and drag-to-swipe, Back/Home/Recents/Power/volume keys, ASCII text input, APK install, screenshot save, adb-only quick install (~10 MB, SHA-1 checked, license shown) | Implemented (Phase 4), untested |
-| Phone live view smoothness | **Limited**: polls `adb exec-out screencap -p`, so a few frames per second, not video. Smooth mirroring would need scrcpy, a separate download that is not included |
+| **Phone desktop**: when a phone is connected and ready, the Phone section opens a macOS-style desktop (menu bar with device/battery/Wi-Fi/clock, movable windows, dock) with Live View, Files, Apps, Terminal, Tools and Settings apps | Implemented, **untested** |
+| Live View smoothness | Smooth mode streams H.264 using the open-source scrcpy server (Apache-2.0, downloaded on first use to `%LOCALAPPDATA%\WSA\scrcpy`, checksum-verified when GitHub provides one) and shows it at 15/30/60 fps (Settings app). If the stream cannot start, it falls back to screenshot polling (a few fps). **Untested**: the stream options and Windows' H.264 decode latency have not been verified on a real phone |
+| Live View input | Clicks and drags are sent with `adb shell input`, so taps have some latency even when the picture is smooth |
 | Pause/resume of downloads | **Not implemented** (Cancel only; a cancelled download restarts from zero) |
 | Per-image download sizes | **Not shown** (`sdkmanager --list` does not report them; expect 1-2 GB each) |
 | Enabling virtualization / Windows Hypervisor Platform | **Cannot be done by WSA** (needs admin + restart); Setup shows the check result and opens Windows Features |
@@ -121,7 +123,7 @@ Open **Phone**. If adb is missing, press *Install adb* (about 10 MB from Google;
 - **Wi-Fi (Android 11+):** Developer options > Wireless debugging > on. In WSA press *Connect over Wi-Fi...*, enter the connect address, and the first time also the pairing address and 6-digit code from *Pair device with pairing code*. PC and phone must be on the same network.
 - Turn on **Live view** to see the screen; click to tap, drag to swipe. *Install APK...*, *Save screenshot...*, hardware keys and text input work on the selected device. Text input supports plain ASCII only.
 
-Notes: only what adb can do is possible. Apps that block screenshots (banking apps, some video) show a black frame. Live view is screenshot polling, not video.
+Notes: only what adb can do is possible. Apps that block screenshots (banking apps, some video) show a black frame. The phone desktop (Files, Apps, Terminal, Tools, Settings, Live View) opens automatically when a phone is ready; use *Phone* in its menu bar to go back, or *Open phone desktop* to return. The Terminal app runs one command per line (`adb shell ...`); interactive programs are not supported. File and app changes are limited to `/sdcard`, `/storage` and `/data/local/tmp`. The scrcpy server is not part of the offline bundle; it is downloaded the first time Live View starts.
 
 ## Create and launch a virtual device
 

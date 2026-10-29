@@ -55,6 +55,35 @@ internal static class Dialogs
         return folder?.Path;
     }
 
+    /// <summary>Asks for one line of text. Returns null when cancelled.</summary>
+    public static async Task<string?> PromptAsync(XamlRoot root, string title, string initial)
+    {
+        var box = new TextBox { Text = initial, MinWidth = 320 };
+        var dialog = new ContentDialog
+        {
+            XamlRoot = root,
+            Title = title,
+            Content = box,
+            PrimaryButtonText = "OK",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary ? box.Text : null;
+    }
+
+    public static async Task<IReadOnlyList<string>> PickFilesAsync(string? extension = null)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        picker.FileTypeFilter.Add(extension ?? "*");
+        if (App.MainWindow is { } window)
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(window));
+        }
+
+        var files = await picker.PickMultipleFilesAsync();
+        return files.Select(f => f.Path).ToList();
+    }
+
     public static async Task<bool> ConfirmAsync(XamlRoot root, string title, string message, string primaryText)
     {
         var dialog = new ContentDialog

@@ -54,6 +54,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Shows the macOS-style desktop of a connected phone inside the Phone section.</summary>
+    public void OpenDesktop(string serial) => ContentFrame.Navigate(typeof(PhoneDesktopPage), serial);
+
     /// <summary>Selects a navigation item by tag and shows its page, optionally passing a parameter to the page.</summary>
     public void NavigateTo(string tag, object? parameter = null)
     {

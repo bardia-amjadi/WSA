@@ -1,0 +1,95 @@
+<UserControl
+    x:Class="WSA.App.Views.PhoneApps.SettingsApp"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WSA.App.ViewModels"
+    Loaded="UserControl_Loaded">
+
+    <Grid Padding="10" RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ScrollViewer>
+            <StackPanel Spacing="10" Padding="0,0,10,0">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="This phone" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.Info}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:InfoRow">
+                                    <Grid ColumnSpacing="10" Margin="0,2">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Label}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Value}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="Refresh" Command="{x:Bind ViewModel.RefreshCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Live View" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <ComboBox Header="Mode" SelectedIndex="{x:Bind ViewModel.ModeIndex, Mode=TwoWay}" Width="300">
+                            <ComboBoxItem Content="Smooth video stream (recommended)" />
+                            <ComboBoxItem Content="Compatible (screenshots, a few fps)" />
+                        </ComboBox>
+                        <ComboBox Header="Frame rate" SelectedIndex="{x:Bind ViewModel.FpsIndex, Mode=TwoWay}" Width="300">
+                            <ComboBoxItem Content="15 fps" />
+                            <ComboBoxItem Content="30 fps" />
+                            <ComboBoxItem Content="60 fps" />
+                        </ComboBox>
+                        <ComboBox Header="Largest side (pixels)" SelectedIndex="{x:Bind ViewModel.SizeIndex, Mode=TwoWay}" Width="300">
+                            <ComboBoxItem Content="720" />
+                            <ComboBoxItem Content="1024" />
+                            <ComboBoxItem Content="1280" />
+                            <ComboBoxItem Content="1600" />
+                        </ComboBox>
+                        <Slider Header="Bit rate (Mbit/s)" Minimum="1" Maximum="40" Value="{x:Bind ViewModel.Bitrate, Mode=TwoWay}" Width="300" HorizontalAlignment="Left" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" FontSize="11" TextWrapping="Wrap"
+                                   Text="Changes are saved immediately and an open Live View restarts with them. Lower the frame rate, size or bit rate if the picture stutters." />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Open Android settings on the phone" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Settings" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="main" Margin="0,0,6,6" />
+                            <Button Content="Wi-Fi" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="wifi" Margin="0,0,6,6" />
+                            <Button Content="Bluetooth" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="bluetooth" Margin="0,0,6,6" />
+                            <Button Content="Display" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="display" Margin="0,0,6,6" />
+                            <Button Content="Sound" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="sound" Margin="0,0,6,6" />
+                            <Button Content="Apps" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="apps" Margin="0,0,6,6" />
+                            <Button Content="Battery" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="battery" Margin="0,0,6,6" />
+                            <Button Content="Developer" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="developer" Margin="0,0,6,6" />
+                            <Button Content="About" Command="{x:Bind ViewModel.OpenPageCommand}" CommandParameter="about" Margin="0,0,6,6" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="1" Spacing="6">
+            <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{x:Bind ViewModel.OperationText, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                               Style="{StaticResource CaptionTextBlockStyle}" />
+                    <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsIndeterminate, Mode=OneWay}" Minimum="0" Maximum="100"
+                                 Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
+            </Grid>
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" IsClosable="False" Severity="Error"
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.HasSuccess, Mode=OneWay}" IsClosable="False" Severity="Success"
+                     Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

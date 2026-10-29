@@ -28,6 +28,18 @@ public sealed class AppSettings
     /// <summary>"System", "Light" or "Dark".</summary>
     public string Theme { get; set; } = "Dark";
 
+    /// <summary>Phone Live View: "stream" (H.264 video, 15-60 fps) or "screenshots" (compatible, a few fps).</summary>
+    public string LiveViewMode { get; set; } = "stream";
+
+    /// <summary>Phone Live View target frame rate (15, 30 or 60).</summary>
+    public int LiveViewFps { get; set; } = 30;
+
+    /// <summary>Longest side of the streamed video in pixels (720, 1024, 1280 or 1600).</summary>
+    public int LiveViewMaxSize { get; set; } = 1280;
+
+    /// <summary>Video bit rate in megabits per second.</summary>
+    public int LiveViewBitrateMbps { get; set; } = 8;
+
     /// <summary>Command timeout (seconds) for short, non-streaming tool invocations.</summary>
     public int ShortCommandTimeoutSeconds { get; set; } = 60;
 
