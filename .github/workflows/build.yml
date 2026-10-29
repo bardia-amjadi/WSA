@@ -1,9 +1,8 @@
-name: Build WSA
+name: Build WSA (Debug, no setup)
 
 on:
   push:
     branches: [ main, master ]
-    tags: [ 'v*' ]
   pull_request:
   workflow_dispatch:
 
@@ -16,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build and package (win-x64)
+    name: Debug build (win-x64, no installer)
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -28,41 +27,28 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Show toolchain
-        shell: pwsh
-        run: dotnet --info
-
-      - name: Resolve version
-        id: ver
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $v = $env:GITHUB_REF_NAME.TrimStart('v')
-          } else {
-            $v = "0.1.0"
-          }
-          "version=$v" >> $env:GITHUB_OUTPUT
-
       - name: Restore
         shell: pwsh
         run: dotnet restore WSA.sln -r win-x64
 
-      - name: Build (Release, x64)
+      - name: Build (Debug, x64)
         shell: pwsh
-        run: dotnet build WSA.sln -c Release -p:Platform=x64 --no-restore -p:Version=${{ steps.ver.outputs.version }}
+        run: dotnet build WSA.sln -c Debug -p:Platform=x64 --no-restore
 
-      - name: Publish unpackaged self-contained ZIP
+      - name: Publish Debug (self-contained, no setup.json)
         shell: pwsh
-        run: ./scripts/publish.ps1 -Version '${{ steps.ver.outputs.version }}'
+        run: |
+          dotnet publish src/WSA.App/WSA.App.csproj -c Debug -r win-x64 -p:Platform=x64 -o artifacts/publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path artifacts/publish/WSA.exe)) { throw 'WSA.exe is missing from the publish output.' }
+          # No setup.json is added, so WSA.exe starts the app directly instead of the installer.
+          Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/WSA-debug-win-x64.zip -CompressionLevel Optimal
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WSA-win-x64-${{ steps.ver.outputs.version }}-${{ github.run_number }}
-          path: |
-            artifacts/WSA-win-x64.zip
-            artifacts/WSA-Setup-win-x64.zip
-            artifacts/WSA-build-info.txt
+          name: WSA-debug-win-x64-${{ github.run_number }}
+          path: artifacts/WSA-debug-win-x64.zip
           if-no-files-found: error
 
       - name: Upload build logs on failure
@@ -74,28 +60,3 @@ jobs:
             **/*.binlog
             **/msbuild*.log
           if-no-files-found: ignore
-
-  release:
-    name: Publish GitHub Release
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: WSA-win-x64-*
-          merge-multiple: true
-          path: release
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/WSA-win-x64.zip
-            release/WSA-Setup-win-x64.zip
-            release/WSA-build-info.txt
-          generate_release_notes: true
-          fail_on_unmatched_files: true
