@@ -1,32 +1,24 @@
-name: Offline setup package
-
-# Manual only. Builds WSA-Setup-Offline-win-x64.zip: the WSA setup package plus the JDK, Android SDK tools and the
-# Android 14 (API 34) Google APIs x86_64 system image, all downloaded on the runner and checksum-verified.
-# Google's Android SDK license does not allow redistributing these files, so keep the result for your own use
-# (it is uploaded as a private workflow artifact, never attached to a release).
+name: Build WSA
 
 on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
   workflow_dispatch:
-    inputs:
-      accept_android_sdk_license:
-        description: 'I accept the Android SDK License Agreement (https://developer.android.com/studio/terms)'
-        type: boolean
-        required: true
-        default: false
-      version:
-        description: 'Version number to stamp on the package'
-        type: string
-        default: '0.1.0'
 
 permissions:
   contents: read
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  offline-package:
-    name: Build offline setup package
-    if: inputs.accept_android_sdk_license
+  build:
+    name: Build and package (win-x64)
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,35 +28,74 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Build the setup package (app + installer)
+      - name: Show toolchain
+        shell: pwsh
+        run: dotnet --info
+
+      - name: Resolve version
+        id: ver
         shell: pwsh
         run: |
-          dotnet restore WSA.sln -r win-x64
-          ./scripts/publish.ps1 -Version '${{ inputs.version }}'
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF_NAME.TrimStart('v')
+          } else {
+            $v = "0.1.0"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
 
-      - name: Download JDK, Android SDK tools and the Android 14 image (checksum-verified)
+      - name: Restore
         shell: pwsh
-        run: |
-          dotnet run --project src/WSA.BundleTool/WSA.BundleTool.csproj -c Release -- `
-            --out "$env:RUNNER_TEMP/bundle" --version '${{ inputs.version }}' --accept-android-sdk-licenses
-          if ($LASTEXITCODE -ne 0) { throw "WSA.BundleTool failed with exit code $LASTEXITCODE" }
+        run: dotnet restore WSA.sln -r win-x64
 
-      - name: Assemble the offline setup package
+      - name: Build (Release, x64)
         shell: pwsh
-        run: |
-          $dest = Join-Path $env:RUNNER_TEMP 'WSA-Setup-Offline'
-          Copy-Item -Path 'artifacts/setup' -Destination $dest -Recurse
-          Copy-Item -Path (Join-Path $env:RUNNER_TEMP 'bundle/packages') -Destination (Join-Path $dest 'packages') -Recurse
-          # Compress-Archive cannot write archives larger than 2 GB, so use 7-Zip (preinstalled on the runner).
-          7z a -tzip -mx=1 "$env:RUNNER_TEMP/WSA-Setup-Offline-win-x64.zip" "$dest/*"
-          if ($LASTEXITCODE -ne 0) { throw "7z failed with exit code $LASTEXITCODE" }
+        run: dotnet build WSA.sln -c Release -p:Platform=x64 --no-restore -p:Version=${{ steps.ver.outputs.version }}
 
-      - name: Upload offline setup package
+      - name: Publish unpackaged self-contained ZIP
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Version '${{ steps.ver.outputs.version }}'
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: WSA-Setup-Offline-win-x64
-          path: ${{ runner.temp }}/WSA-Setup-Offline-win-x64.zip
-          compression-level: 0
-          retention-days: 7
+          name: WSA-win-x64-${{ steps.ver.outputs.version }}-${{ github.run_number }}
+          path: |
+            artifacts/WSA-win-x64.zip
+            artifacts/WSA-Setup-win-x64.zip
+            artifacts/WSA-build-info.txt
           if-no-files-found: error
- 
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            **/*.binlog
+            **/msbuild*.log
+          if-no-files-found: ignore
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: WSA-win-x64-*
+          merge-multiple: true
+          path: release
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/WSA-win-x64.zip
+            release/WSA-Setup-win-x64.zip
+            release/WSA-build-info.txt
+          generate_release_notes: true
+          fail_on_unmatched_files: true
